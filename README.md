@@ -76,4 +76,5 @@ If your Windows execution policy blocks local PowerShell scripts, run the listed
 commands directly; no policy change is needed for those commands.
 
 No real Firebase project, service-account credentials or Apple signing identity
-is committed. No cloud resources were deployed and no GitHub changes were pushed.
+is committed. No cloud resources were deployed. Source changes are published to
+GitHub in separate folder commits; consult the repository history for progress.
