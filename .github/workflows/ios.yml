@@ -1,0 +1,12 @@
+name: Build iOS on configured Mac
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ios:
+    # Register a Mac runner with compatible Xcode and Swift 6.4 before dispatching.
+    runs-on: [self-hosted, macOS, spendwise-ios]
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/build-ios.sh
