@@ -1,0 +1,10 @@
+{
+  "name": "spendwise-validation", "private": true, "type": "module",
+  "scripts": {
+    "test": "node --test firebase/functions/test/domain.test.js firebase/functions/test/commands.test.js",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-spendwise \"node --test firebase/tests/rules.test.mjs\"",
+    "test:integration": "firebase emulators:exec --only auth,firestore,functions --project demo-spendwise \"node --test firebase/tests/integration.test.mjs\"",
+    "check:backend": "node --check firebase/functions/index.js && node --check firebase/functions/command-handler.js"
+  },
+  "devDependencies": { "@firebase/rules-unit-testing": "^4.0.1", "firebase": "^11.0.0", "firebase-tools": "^14.0.0" }
+}
