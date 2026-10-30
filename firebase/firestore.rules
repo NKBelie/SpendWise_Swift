@@ -1,0 +1,63 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function activeUser() {
+      return signedIn() && get(/databases/$(database)/documents/access/$(request.auth.uid)).data.status == 'ACTIVE';
+    }
+    function owner(uid) { return activeUser() && request.auth.uid == uid; }
+    function admin() {
+      return activeUser() && get(/databases/$(database)/documents/access/$(request.auth.uid)).data.role == 'ADMIN';
+    }
+    function walletMember(walletID) {
+      return activeUser() && exists(/databases/$(database)/documents/wallets/$(walletID)/members/$(request.auth.uid));
+    }
+    function liveGrant(grantID) {
+      let g = get(/databases/$(database)/documents/adviceGrants/$(grantID)).data;
+      return activeUser() && g.advisorId == request.auth.uid && g.status == 'ACTIVE'
+        && g.expiresAt > request.time.toMillis() / 1000
+        && get(/databases/$(database)/documents/access/$(g.clientId)).data.status == 'ACTIVE'
+        && get(/databases/$(database)/documents/access/$(request.auth.uid)).data.role == 'FINANCIAL_ADVISOR';
+    }
+    match /access/{uid} { allow read: if signedIn() && request.auth.uid == uid; allow write: if false; }
+    match /users/{uid} {
+      allow read: if owner(uid);
+      allow write: if false;
+      match /{collection}/{recordID} {
+        allow read: if owner(uid) && collection in ['transactions', 'budgets', 'goals', 'bills', 'savingsContributions', 'billPayments'];
+        allow write: if false;
+      }
+    }
+    match /wallets/{walletID} {
+      allow read: if activeUser() && request.auth.uid in resource.data.memberIds;
+      allow write: if false;
+      match /{collection}/{recordID} {
+        allow read: if walletMember(walletID) && collection in ['members', 'contributions', 'expenses', 'budgets'];
+        allow write: if false;
+      }
+    }
+    match /walletInvitations/{invitationID} {
+      allow read: if activeUser() && (resource.data.inviteeId == request.auth.uid || resource.data.invitedBy == request.auth.uid);
+      allow write: if false;
+    }
+    match /adviceRequests/{requestID} {
+      allow read: if activeUser() && (resource.data.clientId == request.auth.uid || resource.data.advisorId == request.auth.uid);
+      allow write: if false;
+    }
+    match /adviceGrants/{grantID} {
+      allow read: if activeUser() && (resource.data.clientId == request.auth.uid || resource.data.advisorId == request.auth.uid);
+      allow write: if false;
+    }
+    match /sharedSummaries/{grantID} {
+      allow read: if owner(resource.data.clientId) || liveGrant(grantID);
+      allow write: if false;
+    }
+    match /recommendations/{recommendationID} {
+      allow read: if owner(resource.data.clientId) || (resource.data.advisorId == request.auth.uid && liveGrant(resource.data.grantId));
+      allow write: if false;
+    }
+    match /categories/{categoryID} { allow read: if activeUser(); allow write: if false; }
+    match /audit/{eventID} { allow read: if admin(); allow write: if false; }
+    match /{document=**} { allow read, write: if false; }
+  }
+}
